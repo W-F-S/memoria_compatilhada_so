@@ -4,64 +4,102 @@
 #include <sys/wait.h> 
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <string.h>
 
+#define DATA_SZ  2048
+#define THREE_SZ  2048
+int keyId = 123;
 
-int memSize = 512; 
+struct campo_compartilhado{
+  int flag_semaforo;
+  char dados[DATA_SZ];
+  char arvore[THREE_SZ];
+};
 
-int memoria_compartilhada(int tam){
-  key_t keytmp = ftok("./pid.txt", 123);
-  int shmid = shmget(keytmp, tam, 0666 | IPC_CREAT);
+int memoria_compartilhada(){
+  key_t keytmp = ftok("./pid.txt", keyId);
+  int shmid = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
   
   return (shmid);
 }
 
 int main(int argc, char *argv[]){
   pid_t pid;
-  int count = 0;
   int memId = 0;
+  int rd_temp = 0;
   void* data = NULL;
-  char buffer[11];
+  struct campo_compartilhado* memoria;
+  int posi;
 
   //int limit = atoi(argv[1]); //limite de processos criados
-  memId = memoria_compartilhada(memSize);
+  memId = memoria_compartilhada();
+  data =  shmat( memId, (void *)0, 0);
 
-  printf("Memory attached at %p\n", memId);
-  data = shmat( memId, (void *)0, 0);
-  printf("Enter something: ");
-  fgets(buffer, 11, stdin)
-  strncpy(shared)
-  strncpy(buffer, 11, stdin);
-
-  printf("Memory attached at %p\n", data);
-
-
-
-
-
-  /*
-  if(limit <= 0){
-    limit = 2;
+  if(data == (void *) -1){
+    printf("\nErro ao criar campo de memoria\n");
+    exit(-1);
   }
 
-  while (count < limit)
- 
-  {
-    pid = fork();
-    printf("\ncount, %d\n", count);
-    if(pid == 0){
-      printf("\t(%d) Esse é o filho %d, pai %d", count, getpid(), getppid());
-      printf("\n\tCodigo executando...");
-      exit(1);
-    }else{
-      printf("Esse é o pai %d", getpid());
+  memoria = (struct campo_compartilhado*) data;
+
+  memoria->flag_semaforo = 0;
+
+
+  printf("Pai, valor semaforo: %d", memoria->flag_semaforo);
+
+
+  pid = fork();
+
+  if(pid==0){
+    while(1){
+
+      printf("\nfilho escrevendo, %d \n", memoria->flag_semaforo);
+
+      rd_temp = rand() % (5); //selecionando
+
+      sleep(rd_temp);
+
+
+      if(memoria->flag_semaforo == 0){
+        printf("tentando escrever\n");
+        memoria->flag_semaforo = 1;
+
+
+        // Find the random number in the range [min, max]
+        int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao de escrita
+        int rd_num = rand() % (100 - 1 + 1); //selecionando posicao de escrita
+
+        printf("Escrendo %d, na posicao %d\n", rd_num, rd_pos);
+
+        memoria->dados[rd_pos] = rd_num;
+        memoria->flag_semaforo = 0;
+      }
     }
-    count++;
-  }
-  */
+  }else{
 
-  while(1){
-    printf("aguardando\n");
-    sleep(20);
+    sleep(5);
+    while(1){
+      printf("\nPai lendo, %d \n", memoria->flag_semaforo);
+
+      rd_temp = rand() % (5); //selecionando
+
+      sleep(rd_temp);
+
+      if(memoria->flag_semaforo == 0){
+        printf("Pai tentando ler\n");
+        memoria->flag_semaforo = 1;
+        printf("Acessar qual posicao:");
+        //scanf("%d", &posi);
+
+        if(posi >0){
+          posi--;
+        }
+        //printf("You wrote: %c\n", memoria->dados[posi]);
+        sleep(1);
+        memoria->flag_semaforo = 0;
+      }
+
+    }
   }
 
   printf("\nfim do programa.\n\n");
