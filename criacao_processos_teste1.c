@@ -36,16 +36,14 @@ int escrever_mem(){
 }
 
 void free_memoria_compartilhada() {
-  // Step 1: Detach from shared memory
   if (shmdt((void*)data) == -1) {
-    perror("shmdt failed");
-    exit(EXIT_FAILURE);
+    printf("free_memoria_compartilhada, shmdt erro");
+    exit(-1);
   }
 
-  // Step 2: Mark the shared memory for deletion
   if (shmctl(memId, IPC_RMID, NULL) == -1) {
-    perror("shmctl failed");
-    exit(EXIT_FAILURE);
+    printf("free_memoria_compartilhada, shmctl erro");
+    exit(-1);
   }
 
 }
@@ -53,14 +51,20 @@ void free_memoria_compartilhada() {
 void handle_sigint(int sig) {
   printf("\nSignal %d, fechando processos\n", sig);
   free_memoria_compartilhada();
-  exit(0); // Exit the program cleanly
+  exit(0);
+}
+
+void print_memoria(){
+
+  printf("\nSignal %d, fechando processos\n", sig);
+
 }
 
 
 int main(int argc, char *argv[]){
   pid_t pid;
 
-  int qt_processos =4;
+  int qt_processos =1;
   int rd_temp = 0;
 
   struct campo_compartilhado* memoria;
@@ -91,8 +95,6 @@ int main(int argc, char *argv[]){
 
         printf("[%c]\n", memoria->dados[0]);
 
-
-
         sleep(1);
         memoria->flag_semaforo = 0;
       }else{
@@ -105,7 +107,7 @@ int main(int argc, char *argv[]){
     for(int i = 0; i < qt_processos; i++){
       pid = fork();
       if (pid < 0) {
-        printf("\nErro ao criar processo\n");
+        printf("\nErro ao criar processo produtor\n");
       } else if (pid == 0) {
         while(1){
           if(memoria->flag_semaforo == 0){
