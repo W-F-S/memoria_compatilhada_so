@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
-#define DATA_SZ  100
+#define DATA_SZ  10
 #define THREE_SZ  2048
 int keyId = 123;
 int memId = 0;
@@ -146,7 +146,9 @@ void close_log_file() {
 int main(int argc, char *argv[]){
   pid_t pid;
   //char* tmpLogMensagem = (char *)malloc( DATA_SZ* sizeof(char));
-  int qt_processos =3;
+  int qt_processos_produtores =3;
+  int qt_processos_consumidores =2;
+
   int rd_temp = 0;
 
   struct campo_compartilhado* memoria;
@@ -166,63 +168,67 @@ int main(int argc, char *argv[]){
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
 
-  //processo consumidor
-  pid = fork();
-  if(pid == 0){
+  for(int i = 0; i < qt_processos_consumidores; i++){
+    pid = fork();
+    if (pid < 0) {
+      printf("\nErro ao criar processo produtor\n");
+    } else if (pid == 0) {
 
-    while(1){
-      if(memoria->flag_semaforo == 0){
-        memoria->flag_semaforo = 1;
+      while(1){
+        if(memoria->flag_semaforo == 0){
+          memoria->flag_semaforo = 1;
 
-        int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
-        //snprintf(tmpLogMensagem, DATA_SZ-1, "\nprocesso (%d) lendo [%d]\n\n", getpid(), memoria->dados[rd_pos]);
-        //open_log_file("logfile.txt");
-        //write_log(tmpLogMensagem);
-        //close_log_file();
+          int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
+          //snprintf(tmpLogMensagem, DATA_SZ-1, "\nprocesso (%d) lendo [%d]\n\n", getpid(), memoria->dados[rd_pos]);
+          //open_log_file("logfile.txt");
+          //write_log(tmpLogMensagem);
+          //close_log_file();
 
-        printf("\nprocesso (%d) lendo [%d]\n\n", getpid(), memoria->dados[rd_pos]);
+          printf("\nprocesso (%d) lendo [%d]\n", getpid(), memoria->dados[rd_pos]); //sessao critica do programa
 
-        print_memoria(memoria);
+          print_memoria(memoria);
 
-        if(memoria->dados[rd_pos] > 0){ memoria->dados[rd_pos] = -1;}
+          if(memoria->dados[rd_pos] > 0){ memoria->dados[rd_pos] = -1;} //sessao critica do programa
 
-        sleep(1);
-        memoria->flag_semaforo = 0;
-        sleep(1);
-      }else{
-        printf("\n processo (%d), leitura bloqueada\n", getpid());
-        sleep(rand() % (5));
+          sleep(1);
+          memoria->flag_semaforo = 0;
+          sleep(1);
+        }else{
+          printf("\n processo (%d), leitura bloqueada", getpid());
+          sleep(rand() % (5));
+        }
       }
     }
-  }else if(pid < 0 ){
-    printf("\nErro ao criar processo leitor\n");
-  }else{//processo produtor
-    for(int i = 0; i < qt_processos; i++){
-      pid = fork();
-      if (pid < 0) {
-        printf("\nErro ao criar processo produtor\n");
-      } else if (pid == 0) {
-        while(1){
-          if(memoria->flag_semaforo == 0){
-            memoria->flag_semaforo = 1;
-            int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
-            int rd_num = rand() % (100 - 1 + 1); //criando valor aleatorio
+  }
 
-            //snprintf(tmpLogMensagem, DATA_SZ-1, "\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
-            //open_log_file("logfile.txt");
-            //write_log(tmpLogMensagem);
-            //close_log_file();
+  for(int i = 0; i < qt_processos_produtores; i++){
+    pid = fork();
+    if (pid < 0) {
+      printf("\nErro ao criar processo produtor\n");
+    } else if (pid == 0) {
+      while(1){
+        if(memoria->flag_semaforo == 0){
+          memoria->flag_semaforo = 1;
+          int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
+          int rd_num = rand() % (100 - 1 + 1); //criando valor aleatorio
 
-            printf("\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
-            memoria->dados[rd_pos] = rd_num;
-            print_memoria(memoria);
-            sleep(1);
-            memoria->flag_semaforo = 0;
-            sleep(1);
-          }else{
-            printf("\n processo (%d), escrita bloqueada\n", getpid());
-            sleep(rand() % (5));
-          }
+          //snprintf(tmpLogMensagem, DATA_SZ-1, "\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
+          //open_log_file("logfile.txt");
+          //write_log(tmpLogMensagem);
+          //close_log_file();
+
+          printf("\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
+
+
+          memoria->dados[rd_pos] = rd_num; //sessao critica do programa
+
+          print_memoria(memoria);
+          sleep(1);
+          memoria->flag_semaforo = 0;
+          sleep(1);
+        }else{
+          printf("\n processo (%d), escrita bloqueada", getpid());
+          sleep(rand() % (5));
         }
       }
     }
