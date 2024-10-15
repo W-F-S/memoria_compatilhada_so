@@ -54,6 +54,7 @@ void* data = NULL;
 
 struct campo_compartilhado{
   int flag_semaforo;  //flag que determina se deve escreber ou nao;
+  int flag_contador;
   char dados[DATA_SZ];
   char arvore[THREE_SZ];
 };
@@ -167,6 +168,7 @@ int main(int argc, char *argv[]){
 
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
+  memoria->flag_contador = 0;
 
   for(int i = 0; i < qt_processos_consumidores; i++){
     pid = fork();
@@ -207,9 +209,10 @@ int main(int argc, char *argv[]){
       printf("\nErro ao criar processo produtor\n");
     } else if (pid == 0) {
       while(1){
-        if(memoria->flag_semaforo == 0){
+        if(memoria->flag_semaforo == 0 && (memoria->flag_contador) < DATA_SZ){
           memoria->flag_semaforo = 1;
-          int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
+
+
           int rd_num = rand() % (100 - 1 + 1); //criando valor aleatorio
 
           //snprintf(tmpLogMensagem, DATA_SZ-1, "\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
@@ -220,7 +223,8 @@ int main(int argc, char *argv[]){
           printf("\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
 
 
-          memoria->dados[rd_pos] = rd_num; //sessao critica do programa
+          memoria->dados[flag_contador] = rd_num; //sessao critica do programa
+          memoria->flag_contador++;
 
           print_memoria(memoria);
           sleep(1);
