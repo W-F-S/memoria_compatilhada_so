@@ -15,6 +15,11 @@ void* data = NULL;
 
 int free_memoria_compartilhada();
 void handle_sigint(int sig);
+int arvore_adicionar(int valor);
+int arvore_remover(int posicao);
+int arvore_visualizar();
+int arvore_pesquisar(int valor);
+
 
 //cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
 
@@ -61,6 +66,7 @@ struct campo_compartilhado{
   char dados[DATA_SZ];
   char arvore[THREE_SZ];
 };
+
 
 int memoria_compartilhada(){
   key_t keytmp = ftok("./pid1.txt", keyId);
@@ -197,7 +203,7 @@ void handle_sigint(int sig) {
   printf("\nSignal %d, fechando processos\n", sig);
   printf("\n\n\n\n");
   free_memoria_compartilhada();
-  kill(getppid(), SIGALRM);
+  kill(getppid());
 }
 
 
