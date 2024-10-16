@@ -13,6 +13,9 @@ int keyId = 123;
 int memId = 0;
 void* data = NULL;
 
+int free_memoria_compartilhada();
+void handle_sigint(int sig);
+
 //cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
 
 
@@ -54,6 +57,7 @@ void* data = NULL;
 
 struct campo_compartilhado{
   int flag_semaforo;  //flag que determina se deve escreber ou nao;
+  int flag_contador;
   char dados[DATA_SZ];
   char arvore[THREE_SZ];
 };
@@ -66,32 +70,7 @@ int memoria_compartilhada(){
 }
 
 
-/*
-int ler_mem(){
 
-}
-
-int escrever_mem(){
-
-}
-**/
-
-/**
- * detecta um ctr+c para que a memória seja limpa
- */
-void free_memoria_compartilhada() {
-
-  if (shmdt((void*)data) == -1) {
-    printf("free_memoria_compartilhada, shmdt erro(%d): %s\n",errno, strerror(errno));
-    exit(-1);
-  }
-
-  if (shmctl(memId, IPC_RMID, NULL) == -1) {
-    printf("free_memoria_compartilhada, shmctl(%d) erro(%d): %s\n", memId, errno, strerror(errno));
-    exit(-1);
-  }
-
-}
 
 void print_memoria(struct campo_compartilhado* memoria){
   printf("\n");
@@ -99,15 +78,6 @@ void print_memoria(struct campo_compartilhado* memoria){
     printf("[%d]", memoria->dados[i]);
   }
   printf("\n");
-}
-
-
-void handle_sigint(int sig) {
-  printf("\n\n\n\n");
-  printf("\nSignal %d, fechando processos\n", sig);
-  printf("\n\n\n\n");
-  free_memoria_compartilhada();
-  exit(0);
 }
 
 
@@ -146,8 +116,8 @@ void close_log_file() {
 int main(int argc, char *argv[]){
   pid_t pid;
   //char* tmpLogMensagem = (char *)malloc( DATA_SZ* sizeof(char));
-  int qt_processos_produtores =3;
-  int qt_processos_consumidores =2;
+  int qt_processos_produtores =1;
+  int qt_processos_consumidores =1;
 
   int rd_temp = 0;
 
@@ -167,6 +137,7 @@ int main(int argc, char *argv[]){
 
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
+  memoria->flag_contador = 0;
 
   for(int i = 0; i < qt_processos_consumidores; i++){
     pid = fork();
@@ -177,19 +148,10 @@ int main(int argc, char *argv[]){
       while(1){
         if(memoria->flag_semaforo == 0){
           memoria->flag_semaforo = 1;
-
           int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
-          //snprintf(tmpLogMensagem, DATA_SZ-1, "\nprocesso (%d) lendo [%d]\n\n", getpid(), memoria->dados[rd_pos]);
-          //open_log_file("logfile.txt");
-          //write_log(tmpLogMensagem);
-          //close_log_file();
-
           printf("\nprocesso (%d) lendo [%d]\n", getpid(), memoria->dados[rd_pos]); //sessao critica do programa
-
           print_memoria(memoria);
-
           if(memoria->dados[rd_pos] > 0){ memoria->dados[rd_pos] = -1;} //sessao critica do programa
-
           sleep(1);
           memoria->flag_semaforo = 0;
           sleep(1);
@@ -207,21 +169,12 @@ int main(int argc, char *argv[]){
       printf("\nErro ao criar processo produtor\n");
     } else if (pid == 0) {
       while(1){
-        if(memoria->flag_semaforo == 0){
+        if(memoria->flag_semaforo == 0 && (memoria->flag_contador) < DATA_SZ){
           memoria->flag_semaforo = 1;
-          int rd_pos = rand() % (DATA_SZ - 1); //selecionando posicao aleatoria
           int rd_num = rand() % (100 - 1 + 1); //criando valor aleatorio
-
-          //snprintf(tmpLogMensagem, DATA_SZ-1, "\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
-          //open_log_file("logfile.txt");
-          //write_log(tmpLogMensagem);
-          //close_log_file();
-
-          printf("\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, rd_pos);
-
-
-          memoria->dados[rd_pos] = rd_num; //sessao critica do programa
-
+          printf("\n processo (%d) Escrendo %d, na posicao %d\n", getpid(), rd_num, memoria->flag_contador);
+          memoria->dados[memoria->flag_contador] = rd_num; //sessao critica do programa
+          memoria->flag_contador++;
           print_memoria(memoria);
           sleep(1);
           memoria->flag_semaforo = 0;
@@ -235,7 +188,37 @@ int main(int argc, char *argv[]){
   }
 
   while(1){
-    //printf("\nprocesso (%d) fim do programa.\n\n", getpid());
     sleep(1);
   }
 }
+
+void handle_sigint(int sig) {
+  printf("\n\n\n\n");
+  printf("\nSignal %d, fechando processos\n", sig);
+  printf("\n\n\n\n");
+  free_memoria_compartilhada();
+  kill(getppid(), SIGALRM);
+}
+
+
+/**
+ * detecta um ctr+c para que a memória seja limpa
+ */
+int free_memoria_compartilhada() {
+  printf("free_memoria_compartilhada,\n");
+
+  if (shmdt((void*)data) == -1) {//retirando acesso ao campo de memória
+    printf("free_memoria_compartilhada, shmdt erro(%d): %s\n",errno, strerror(errno));
+    return (-1);
+  }
+
+  if (shmctl(memId, IPC_RMID, NULL) == -1) {
+    printf("free_memoria_compartilhada, shmctl(%d) erro(%d): %s\n", memId, errno, strerror(errno));
+    return (-1);
+  }
+  return (0);
+}
+
+
+
+
