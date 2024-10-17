@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #define DATA_SZ  10
-#define THREE_SZ  2048
+#define THREE_SZ  100
 int keyId = 123;
 int memId = 0;
 void* data = NULL;
@@ -18,7 +18,19 @@ void handle_sigint(int sig);
 int arvore_adicionar(int valor);
 int arvore_remover(int posicao);
 int arvore_visualizar();
+int adicionar_maior(int valor, int parente);
+int adicionar_menor(int valor, int parente);
+
 int arvore_pesquisar(int valor);
+
+struct campo_compartilhado{
+  int flag_semaforo;  //flag que determina se deve escreber ou nao;
+  int flag_contador;
+  char dados[DATA_SZ];
+  char arvore[THREE_SZ];
+};
+
+struct campo_compartilhado* memoria;
 
 
 //cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
@@ -60,34 +72,44 @@ int arvore_pesquisar(int valor);
  *
  */
 
-struct campo_compartilhado{
-  int flag_semaforo;  //flag que determina se deve escreber ou nao;
-  int flag_contador;
-  char dados[DATA_SZ];
-  char arvore[THREE_SZ];
-};
 
 
-int arvore_adicionar(int valor){
-    if(memoria->arvore[0] != 0){
+int arvore_adicionar (int valor){
+    if(memoria->arvore[0] == 0){
       memoria->arvore[0] = valor;
-    }else if (memoria->arvore[0] > valor{
+    }else if (memoria->arvore[0] > valor){
       //adicionar maior
-      adicionar_maior(valor, 0);
+      adicionar_menor(valor, 1);
+
     }else if (memoria->arvore[0] < valor){
       //adicionar menor
+      adicionar_maior(valor, 0);
     }else{
-      printf("erro");
+      printf("erro ao adicionar valor %d na arvore", valor);
     }
 }
 
 int adicionar_maior(int valor, int parente){
   if(parente >= THREE_SZ){
     printf("Erro ao adicionar novo valor direita, %d", parente+2);
-  }else if(memoria->arvore[(parente)] == "\0"){
+  }else if(memoria->arvore[(parente)] == 0){
     memoria->arvore[(parente)] = valor;
+  }else if(memoria->arvore[(parente)] < valor){
+    adicionar_maior(valor, (2*parente)+2);
   }else{
-    adicionar_maior(valor, parente+2){
+    adicionar_menor(valor, (2*parente)+1);
+  }
+}
+
+int adicionar_menor(int valor, int parente){
+  if(parente >= THREE_SZ){
+    printf("Erro ao adicionar novo valor direita, %d", parente+2);
+  }else if(memoria->arvore[(parente)] == 0){
+    memoria->arvore[(parente)] = valor;
+  }else if(memoria->arvore[(parente)] < valor){
+    adicionar_maior(valor, (2*parente)+2);
+  }else{
+    adicionar_menor(valor, (2*parente)+1);
   }
 }
 
@@ -98,15 +120,26 @@ int memoria_compartilhada(){
   return (shmid);
 }
 
-
-
-
 void print_memoria(struct campo_compartilhado* memoria){
   printf("\n");
   for(int i=0; i<DATA_SZ; i++){
     printf("[%d]", memoria->dados[i]);
   }
   printf("\n");
+}
+
+void print_arvore(struct campo_compartilhado* memoria){
+  printf("\n");
+  for(int i=0; i<THREE_SZ; i++){
+    printf("[%d]", memoria->arvore[i]);
+  }
+  printf("\n");
+}
+
+void limpar_arvore(){
+  for(int i=0; i<THREE_SZ; i++){
+    memoria->arvore[i] = 0;
+  }
 }
 
 
@@ -150,7 +183,6 @@ int main(int argc, char *argv[]){
 
   int rd_temp = 0;
 
-  struct campo_compartilhado* memoria;
   int posi;
   signal(SIGINT, handle_sigint); //capturando sinal
 
@@ -158,6 +190,8 @@ int main(int argc, char *argv[]){
   //int limit = atoi(argv[1]); //limite de processos criados
   memId = memoria_compartilhada();
   data =  shmat( memId, (void *)0, 0); //atrelando a mem compatilhada a um ponteiro
+
+  //free_memoria_compartilhada();
 
   if(data == (void *) -1){
     printf("\nErro ao criar campo de memoria\n");
@@ -167,7 +201,7 @@ int main(int argc, char *argv[]){
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
   memoria->flag_contador = 0;
-
+  /*
   for(int i = 0; i < qt_processos_consumidores; i++){
     pid = fork();
     if (pid < 0) {
@@ -215,10 +249,24 @@ int main(int argc, char *argv[]){
       }
     }
   }
+  */
+  limpar_arvore();
 
-  while(1){
-    sleep(1);
-  }
+  arvore_adicionar(10);
+  arvore_adicionar(5);
+  arvore_adicionar(20);
+
+  arvore_adicionar(3);
+  arvore_adicionar(8);
+  arvore_adicionar(15);
+  arvore_adicionar(25);
+
+  arvore_adicionar(32);
+  arvore_adicionar(4);
+  arvore_adicionar(2);
+
+  print_arvore(memoria);
+  free_memoria_compartilhada();
 }
 
 void handle_sigint(int sig) {
@@ -226,7 +274,7 @@ void handle_sigint(int sig) {
   printf("\nSignal %d, fechando processos\n", sig);
   printf("\n\n\n\n");
   free_memoria_compartilhada();
-  kill(getppid());
+  kill(getppid(), SIGCHLD);
 }
 
 
