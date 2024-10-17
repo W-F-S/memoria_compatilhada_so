@@ -68,6 +68,29 @@ struct campo_compartilhado{
 };
 
 
+int arvore_adicionar(int valor){
+    if(memoria->arvore[0] != 0){
+      memoria->arvore[0] = valor;
+    }else if (memoria->arvore[0] > valor{
+      //adicionar maior
+      adicionar_maior(valor, 0);
+    }else if (memoria->arvore[0] < valor){
+      //adicionar menor
+    }else{
+      printf("erro");
+    }
+}
+
+int adicionar_maior(int valor, int parente){
+  if(parente >= THREE_SZ){
+    printf("Erro ao adicionar novo valor direita, %d", parente+2);
+  }else if(memoria->arvore[(parente)] == "\0"){
+    memoria->arvore[(parente)] = valor;
+  }else{
+    adicionar_maior(valor, parente+2){
+  }
+}
+
 int memoria_compartilhada(){
   key_t keytmp = ftok("./pid1.txt", keyId);
   int shmid = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
