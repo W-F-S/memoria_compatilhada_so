@@ -201,7 +201,7 @@ int main(int argc, char *argv[]){
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
   memoria->flag_contador = 0;
-  /*
+  
   for(int i = 0; i < qt_processos_consumidores; i++){
     pid = fork();
     if (pid < 0) {
@@ -249,22 +249,10 @@ int main(int argc, char *argv[]){
       }
     }
   }
-  */
+  
   limpar_arvore();
 
-  arvore_adicionar(10);
-  arvore_adicionar(5);
-  arvore_adicionar(20);
-
-  arvore_adicionar(3);
-  arvore_adicionar(8);
-  arvore_adicionar(15);
-  arvore_adicionar(25);
-
-  arvore_adicionar(32);
-  arvore_adicionar(4);
-  arvore_adicionar(2);
-
+  //arvore_adicionar(10);
   print_arvore(memoria);
   free_memoria_compartilhada();
 }
