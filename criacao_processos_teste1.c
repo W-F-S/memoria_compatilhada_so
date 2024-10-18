@@ -1,36 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <string.h>
-#include <errno.h>
+#include "includes.h"
 
-#define DATA_SZ  10
-#define THREE_SZ  100
+
 int keyId = 123;
 int memId = 0;
 void* data = NULL;
-
-int free_memoria_compartilhada();
-void handle_sigint(int sig);
-int arvore_adicionar(int valor);
-int arvore_remover(int posicao);
-int arvore_visualizar();
-int adicionar_maior(int valor, int parente);
-int adicionar_menor(int valor, int parente);
-
-int arvore_pesquisar(int valor);
-
-struct campo_compartilhado{
-  int flag_semaforo;  //flag que determina se deve escreber ou nao;
-  int flag_contador;
-  char dados[DATA_SZ];
-  char arvore[THREE_SZ];
-};
-
-struct campo_compartilhado* memoria;
+struct campo_compartilhado* memoria = NULL;
 
 
 //cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
@@ -74,104 +48,6 @@ struct campo_compartilhado* memoria;
 
 
 
-int arvore_adicionar (int valor){
-    if(memoria->arvore[0] == 0){
-      memoria->arvore[0] = valor;
-    }else if (memoria->arvore[0] > valor){
-      //adicionar maior
-      adicionar_menor(valor, 1);
-
-    }else if (memoria->arvore[0] < valor){
-      //adicionar menor
-      adicionar_maior(valor, 0);
-    }else{
-      printf("erro ao adicionar valor %d na arvore", valor);
-    }
-}
-
-int adicionar_maior(int valor, int parente){
-  if(parente >= THREE_SZ){
-    printf("Erro ao adicionar novo valor direita, %d", parente+2);
-  }else if(memoria->arvore[(parente)] == 0){
-    memoria->arvore[(parente)] = valor;
-  }else if(memoria->arvore[(parente)] < valor){
-    adicionar_maior(valor, (2*parente)+2);
-  }else{
-    adicionar_menor(valor, (2*parente)+1);
-  }
-}
-
-int adicionar_menor(int valor, int parente){
-  if(parente >= THREE_SZ){
-    printf("Erro ao adicionar novo valor direita, %d", parente+2);
-  }else if(memoria->arvore[(parente)] == 0){
-    memoria->arvore[(parente)] = valor;
-  }else if(memoria->arvore[(parente)] < valor){
-    adicionar_maior(valor, (2*parente)+2);
-  }else{
-    adicionar_menor(valor, (2*parente)+1);
-  }
-}
-
-int memoria_compartilhada(){
-  key_t keytmp = ftok("./pid1.txt", keyId);
-  int shmid = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
-
-  return (shmid);
-}
-
-void print_memoria(struct campo_compartilhado* memoria){
-  printf("\n");
-  for(int i=0; i<DATA_SZ; i++){
-    printf("[%d]", memoria->dados[i]);
-  }
-  printf("\n");
-}
-
-void print_arvore(struct campo_compartilhado* memoria){
-  printf("\n");
-  for(int i=0; i<THREE_SZ; i++){
-    printf("[%d]", memoria->arvore[i]);
-  }
-  printf("\n");
-}
-
-void limpar_arvore(){
-  for(int i=0; i<THREE_SZ; i++){
-    memoria->arvore[i] = 0;
-  }
-}
-
-
-// Global file pointer
-FILE *log_file = NULL;
-
-// Function to open the file
-void open_log_file(const char *filename) {
-  log_file = fopen(filename, "a"); // Open in append mode
-  if (log_file == NULL) {
-    perror("Error opening file");
-    exit(1);
-  }
-}
-
-// Function to write a message to the file
-void write_log(const char *message) {
-  if (log_file == NULL) {
-    fprintf(stderr, "Log file is not open.\n");
-    return;
-  }
-  fprintf(log_file, "%s\n", message); // Write the message to the file
-}
-
-// Function to close the file
-void close_log_file() {
-  if (log_file != NULL) {
-    fclose(log_file);
-    log_file = NULL;
-  }
-}
-
 
 
 
@@ -198,10 +74,13 @@ int main(int argc, char *argv[]){
     exit(-1);
   }
 
+
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_semaforo = 0;
   memoria->flag_contador = 0;
-  
+
+
+  /*
   for(int i = 0; i < qt_processos_consumidores; i++){
     pid = fork();
     if (pid < 0) {
@@ -249,11 +128,17 @@ int main(int argc, char *argv[]){
       }
     }
   }
-  
-  limpar_arvore();
+  */
 
-  //arvore_adicionar(10);
-  print_arvore(memoria);
+  arvore_limpar();
+
+  arvore_adicionar(12);
+  arvore_adicionar(10);
+
+  arvore_visualizar(memoria);
+
+  arvore_limpar();
+
   free_memoria_compartilhada();
 }
 

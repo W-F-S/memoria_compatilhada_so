@@ -1,98 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <string.h>
-#include <errno.h>
-
-#define DATA_SZ  10
-#define THREE_SZ  2048
-int keyId = 123;
-int memId = 0;
-void* data = NULL;
-
-//cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
-
-struct campo_compartilhado{
-  int flag_semaforo;  //flag que determina se deve escreber ou nao;
-  int flag_contador;
-  char dados[DATA_SZ];
-  char arvore[THREE_SZ];
-};
-
-int memoria_compartilhada(){
-  key_t keytmp = ftok("./pid1.txt", keyId);
-  int shmid = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
-
-  return (shmid);
-}
-
-
-
-void print_memoria(struct campo_compartilhado* memoria){
-  printf("\n");
-  for(int i=0; i<DATA_SZ; i++){
-    printf("[%d]", memoria->dados[i]);
-  }
-  printf("\n");
-}
-
-int main(int argc, char *argv[]){
-  int qt_processos_consumidores =1;
-
-  int rd_temp = 0;
-
-  struct campo_compartilhado* memoria;
-  int posi;
-
-
-  //int limit = atoi(argv[1]); //limite de processos criados
-  memId = memoria_compartilhada();
-  data =  shmat( memId, (void *)0, 0); //atrelando a mem compatilhada a um ponteiro
-
-  if(data == (void *) -1){
-    printf("\nErro ao criar campo de memoria\n");
-    exit(-1);
-  }
-
-  memoria = (struct campo_compartilhado*) data; //
-
-  for(int i = 0; i < qt_processos_consumidores; i++){
-    pid = fork();
-    if (pid < 0) {
-      printf("\nErro ao criar processo produtor\n");
-    } else if (pid == 0) {
-      while (!stop) {
-          printf("Digite um número (0 para sair, 1 para executar a função 01): ");
-          scanf("%d", &input);
-
-          // Verifica se o usuário digitou 0 para sair
-          if (input == 0) {
-            printf("Saindo...\n");
-            break;
-          }
-
-          // Switch para verificar qual função executar
-          switch (input) {
-            case 1:
-              print_memoria(memoria);
-              break;
-            default:
-              printf("Nenhuma função associada ao valor %d\n", input);
-              break;
-          }
-
-      }
-    }
-  }
-}
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
+#include "includes.h"
 
 volatile sig_atomic_t stop = 0;
 
@@ -107,11 +13,12 @@ void execute_function_01() {
 int main() {
   int input;
 
+
   // Captura o sinal de CTRL-C
   signal(SIGINT, handle_sigint);
 
   while (!stop) {
-    printf("Digite um número (0 para sair, 1 para executar a função 01): ");
+    printf("0, sair;\n1, mostrar arvore\n2, adicionar valor arvore");
     scanf("%d", &input);
 
     // Verifica se o usuário digitou 0 para sair
@@ -122,9 +29,15 @@ int main() {
 
     // Switch para verificar qual função executar
     switch (input) {
-      case 1:
+      case 0:
         execute_function_01();
         break;
+      case 1:
+        execute_function_01();
+      break;
+      case 2:
+        execute_function_01();
+      break;
       default:
         printf("Nenhuma função associada ao valor %d\n", input);
         break;
