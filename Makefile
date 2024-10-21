@@ -3,8 +3,8 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # Define the executable and source files
-TARGET_CAMPO_MEMORIA = trabalho_so2_memoria_compartilhada
-SRC_CAMPO_MEMORIA = criacao_processos_teste1.c lib.c
+TARGET_CAMPO_MEMORIA = processos
+SRC_CAMPO_MEMORIA = processos.c lib.c
 
 TARGET_VISUALIZADOR = visualizador
 SRC_VISUALIZADOR = visualizador.c lib.c

@@ -7,154 +7,197 @@
 #include <string.h>
 #include <errno.h>
 #include <semaphore.h>
+#include <signal.h>
+#include <time.h>
 
 #define DATA_SZ  10
-int keyId = 123;
-int memId = 0;
-void* data = NULL;
-sem_t sem_empty;  // Contador de espaços vazios no buffer
-sem_t sem_full;   // Contador de itens no buffer
-sem_t sem_mutex;  // Mutex para proteger a seção crítica
+#define MAX_PROD 3
+#define MAX_CONS 3
+#define SHM_KEY_PATH "./pid1.txt"
+#define SHM_KEY_ID 123
 
-struct campo_compartilhado{
-  char dados[DATA_SZ];
+// Estrutura de memória compartilhada
+struct campo_compartilhado {
+    int dados[DATA_SZ];       // Buffer circular
+    int in;                    // Índice de produção
+    int out;                   // Índice de consumo
+    int ordem;                 // Variável compartilhada para ordenação
+    sem_t sem_mutex;           // Semáforo para exclusão mútua
+    sem_t sem_full;            // Semáforo para contar itens disponíveis
+    sem_t sem_empty;           // Semáforo para contar espaços disponíveis
 };
 
+int shmid = 0;
+struct campo_compartilhado* memoria = NULL;
+
+// Função para criar e obter a memória compartilhada
 int memoria_compartilhada(){
-  key_t keytmp = ftok("./pid1.txt", keyId);
-  int shmid = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
-  return (shmid);
+    key_t keytmp = ftok(SHM_KEY_PATH, SHM_KEY_ID);
+    if (keytmp == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+    int shmid_local = shmget(keytmp, sizeof(struct campo_compartilhado), 0666 | IPC_CREAT);
+    if (shmid_local == -1) {
+        perror("shmget");
+        exit(EXIT_FAILURE);
+    }
+    return shmid_local;
 }
 
-/**
- * detecta um ctr+c para que a memória seja limpa
- */
+// Função para liberar a memória compartilhada e destruir os semáforos
 void free_memoria_compartilhada() {
-  if (shmdt((void*)data) == -1) {
-    printf("free_memoria_compartilhada, shmdt erro(%d): %s\n",errno, strerror(errno));
-    exit(-1);
-  }
+    if (memoria != (void*)-1 && memoria != NULL) {
+        // Destruir os semáforos
+        sem_destroy(&memoria->sem_mutex);
+        sem_destroy(&memoria->sem_full);
+        sem_destroy(&memoria->sem_empty);
 
-  if (shmctl(memId, IPC_RMID, NULL) == -1) {
-    printf("free_memoria_compartilhada, shmctl(%d) erro(%d): %s\n", memId, errno, strerror(errno));
-    exit(-1);
-  }
+        // Desanexar a memória compartilhada
+        if (shmdt((void*)memoria) == -1) {
+            perror("shmdt");
+            // Não saímos para tentar remover a memória compartilhada mesmo em caso de erro
+        }
+
+        // Remover a memória compartilhada
+        if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+            perror("shmctl");
+        }
+    }
 }
 
-void print_memoria(struct campo_compartilhado* memoria) {
-  printf("\n");
-  for (int i = 0; i < DATA_SZ; i++) {
-    printf("[%d]", memoria->dados[i]);
-  }
-  printf("\n");
-}
-
+// Manipulador de sinais para garantir a limpeza
 void handle_sigint(int sig) {
-  printf("\n\n\n\n");
-  printf("\nSignal %d, fechando processos\n", sig);
-  printf("\n\n\n\n");
-  free_memoria_compartilhada();
-  exit(0);
+    printf("\n\nSignal %d received, fechando processos e liberando recursos...\n", sig);
+    free_memoria_compartilhada();
+    exit(0);
+}
+
+// Função para imprimir o estado do buffer
+void print_memoria(struct campo_compartilhado* memoria) {
+    printf("\nBuffer: [");
+    for (int i = 0; i < DATA_SZ; i++) {
+        printf("%d", memoria->dados[i]);
+        if (i < DATA_SZ - 1) printf(", ");
+    }
+    printf("]\n");
 }
 
 int main(int argc, char *argv[]) {
-  printf("iniciando programa\n");
+    printf("Iniciando programa\n");
 
-  // Variáveis de processo
-  pid_t pid;
-  int qt_processos_produtores = 3;
-  int qt_processos_consumidores = 1;
-  int ordem = 1;
-  struct campo_compartilhado* memoria;
+    // Registro do manipulador de sinais
+    signal(SIGINT, handle_sigint);
 
-  // Inicialização dos semáforos
-  sem_init(&sem_empty, 1, DATA_SZ); // Inicializa semáforo com o número de espaços vazios
-  sem_init(&sem_full, 1, 0);        // Inicializa semáforo com o número de itens no buffer (0)
-  sem_init(&sem_mutex, 1, 1);       // Mutex inicializado para garantir exclusão mútua
+    // Criação da memória compartilhada
+    shmid = memoria_compartilhada();
+    memoria = (struct campo_compartilhado*) shmat(shmid, (void *)0, 0);
+    if (memoria == (void *)-1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
+    }
 
-  signal(SIGINT, handle_sigint); // Captura do sinal
+    // Inicialização da estrutura de memória compartilhada
+    memoria->in = 0;
+    memoria->out = 0;
+    memoria->ordem = 1;
+    for (int i = 0; i < DATA_SZ; i++) {
+        memoria->dados[i] = 0;
+    }
 
-  memId = memoria_compartilhada();
-  data = shmat(memId, (void *)0, 0); // Atrelando a memória compartilhada a um ponteiro
+    // Inicialização dos semáforos
+    if (sem_init(&memoria->sem_mutex, 1, 1) == -1) { // 1 indica que é compartilhado entre processos
+        perror("sem_init sem_mutex");
+        free_memoria_compartilhada();
+        exit(EXIT_FAILURE);
+    }
+    if (sem_init(&memoria->sem_full, 1, 0) == -1) {
+        perror("sem_init sem_full");
+        free_memoria_compartilhada();
+        exit(EXIT_FAILURE);
+    }
+    if (sem_init(&memoria->sem_empty, 1, DATA_SZ) == -1) {
+        perror("sem_init sem_empty");
+        free_memoria_compartilhada();
+        exit(EXIT_FAILURE);
+    }
 
-  if (data == (void *)-1) {
-    printf("\nErro ao criar campo de memoria\n");
-    exit(-1);
-  }
+    // Variáveis de processo
+    pid_t pid;
+    int qt_processos_produtores = MAX_PROD;
+    int qt_processos_consumidores = MAX_CONS;
 
-  memoria = (struct campo_compartilhado*)data;
+    // Criação de consumidores
+    for (int i = 0; i < qt_processos_consumidores; i++) {
+        pid = fork();
+        if (pid < 0) {
+            perror("Erro ao criar processo consumidor");
+            free_memoria_compartilhada();
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Processo Consumidor
+            srand(getpid());
+            while (1) {
+                sem_wait(&memoria->sem_full); // Espera por itens disponíveis
+                sem_wait(&memoria->sem_mutex); // Entra na seção crítica
 
-  // Inicializa o buffer com zeros
-  for (int i = 0; i < DATA_SZ; i++) {
-    memoria->dados[i] = 0;
-  }
+                // Seção crítica: Consumindo um item
+                int item = memoria->dados[memoria->out];
+                printf("\n(%d) Processo Consumidor [%d] consumindo %d na posição %d\n",
+                       memoria->ordem++, getpid(), item, memoria->out);
+                memoria->dados[memoria->out] = 0; // Opcional: limpar a posição
+                memoria->out = (memoria->out + 1) % DATA_SZ;
 
-  // Criando consumidores
-  for (int i = 0; i < qt_processos_consumidores; i++) {
-    pid = fork();
-    if (pid < 0) {
-      printf("\nErro ao criar processo consumidor\n");
-    } else if (pid == 0) {
-      srand(getpid()); //gerando novo seed randomico para leitor
-      while (1) {
-        printf("Tentando ler\n");
-        sem_wait(&sem_mutex); // Entra na seção crítica, bloqueia processo caso <= 0
+                print_memoria(memoria);
 
-        // sessao critica
-        int rd_pos = rand() % (DATA_SZ - 1); // Seleciona posição aleatória
-        printf("\n(%d) Processo (%d) lendo [%d], %d\n", ordem++, getpid(), memoria->dados[rd_pos], rd_pos);
-        if (memoria->dados[rd_pos] > 0) {
-          memoria->dados[rd_pos] = -1; // Consumir o item
+                sem_post(&memoria->sem_mutex); // Sai da seção crítica
+                sem_post(&memoria->sem_empty); // Libera espaço no buffer
+
+                printf("----------------------------------------\n");
+                sleep(rand() % 3 + 1); // Simula tempo de consumo
+            }
         }
-
-        print_memoria(memoria);
-        printf("\n");
-
-        sem_post(&sem_mutex);
-
-        printf("----------------------------------------\n");
-
-        sleep(rand() % (5)); //diminuir esse valor para dar preferencia para leitor;
-      }
     }
-  }
 
-  // Criando produtores
-  for (int i = 0; i < qt_processos_produtores; i++) {
-    pid = fork();
-    if (pid < 0) {
-      printf("\nErro ao criar processo produtor\n");
-    } else if (pid == 0) {
-      srand(getpid()); //gerando novo seed randomico para produtor
-      while (1) {
-        printf("Tentando escrever\n");
-        sem_wait(&sem_mutex); // Entra na seção crítica, bloqueia processo caso <= 0
+    // Criação de produtores
+    for (int i = 0; i < qt_processos_produtores; i++) {
+        pid = fork();
+        if (pid < 0) {
+            perror("Erro ao criar processo produtor");
+            free_memoria_compartilhada();
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Processo Produtor
+            srand(getpid());
+            while (1) {
+                int rd_num = rand() % 100 + 1; // Valor a ser produzido
 
-        // Sessão crítica: Produzindo um item
-        int rd_pos = rand() % (DATA_SZ - 1); // Seleciona posição aleatória
-        int rd_num = rand() % 100;     // Cria um valor aleatório
-        printf("\n(%d) Processo (%d) escrevendo %d na posição %d\n", ordem++, getpid(), rd_num, rd_pos);
-        memoria->dados[rd_pos] = rd_num;
+                sem_wait(&memoria->sem_empty); // Espera por espaço disponível
+                sem_wait(&memoria->sem_mutex); // Entra na seção crítica
 
-        print_memoria(memoria);
-        printf("\n");
+                // Seção crítica: Produzindo um item
+                memoria->dados[memoria->in] = rd_num;
+                printf("\n(%d) Processo Produtor [%d] produzindo %d na posição %d\n",
+                       memoria->ordem++, getpid(), rd_num, memoria->in);
+                memoria->in = (memoria->in + 1) % DATA_SZ;
 
-        sem_post(&sem_mutex); //liberando mutex/semaforo
-        printf("----------------------------------------\n");
-        sleep(rand() % (5));
-      }
+                print_memoria(memoria);
+
+                sem_post(&memoria->sem_mutex); // Sai da seção crítica
+                sem_post(&memoria->sem_full);  // Indica que há um novo item
+
+                printf("----------------------------------------\n");
+                sleep(rand() % 3 + 1); // Simula tempo de produção
+            }
+        }
     }
-  }
 
-  // Mantendo o processo principal em execução
-  while (1) {
-    sleep(1);
-  }
+    // Processo Pai espera indefinidamente
+    while (1) {
+        pause(); // Espera por sinais
+    }
 
-  // Destrói os semáforos ao final (não será alcançado nesse loop infinito)
-  sem_destroy(&sem_empty);
-  sem_destroy(&sem_full);
-  sem_destroy(&sem_mutex);
 
-  return 0;
+    free_memoria_compartilhada();
+    return 0;
 }
