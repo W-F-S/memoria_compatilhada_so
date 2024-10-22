@@ -31,7 +31,7 @@ int arvore_remover(int posicao);
 int arvore_adicionar(int valor);
 int arvore_adicionar_maior(int valor, int parente);
 int arvore_adicionar_menor(int valor, int parente);
-void arvore_limpar();
+void arvore_limpar(struct campo_compartilhado* memoria);
 void arvore_visualizar(struct campo_compartilhado* memoria);
 int arvore_pesquisar(int valor);
 
@@ -39,6 +39,7 @@ int free_memoria_compartilhada();
 int memoria_compartilhada();
 void memoria_shift();
 int memoria_adicionar(int valor);
+void memoria_visualizar(struct campo_compartilhado* memoria);
 
 extern void* data;
 extern int keyId;

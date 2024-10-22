@@ -11,25 +11,25 @@ SRC_VISUALIZADOR = visualizador.c lib.c
 
 OBJ = main.o
 
+mensagem = $(shell echo "Execute os arquivos $(TARGET_CAMPO_MEMORIA) e $(TARGET_CAMPO_MEMORIA)")
 
+$(info $(a))
 
-$(TARGET_CAMPO_MEMORIA): $(SRC_CAMPO_MEMORIA)
+comp:
 	touch "pid.txt"
 	$(CC) $(CFLAGS) $(SRC_CAMPO_MEMORIA) -o $(TARGET_CAMPO_MEMORIA)
-
-$(TARGET_VISUALIZADOR): $(SRC_VISUALIZADOR)
 	$(CC) $(CFLAGS) $(SRC_VISUALIZADOR) -o $(TARGET_VISUALIZADOR)
 
 
-# Default rule to build the executable
-#$(TARGET): $(OBJ)
-#	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+#$(TARGET_CAMPO_MEMORIA): $(SRC_CAMPO_MEMORIA)
+#	touch "pid.txt"
+#	$(CC) $(CFLAGS) $(SRC_CAMPO_MEMORIA) -o $(TARGET_CAMPO_MEMORIA)
+#	$(CC) $(CFLAGS) $(SRC_VISUALIZADOR) -o $(TARGET_VISUALIZADOR)
 
-# Rule to build object files from source files
-#%.o: %.c
-#	$(CC) $(CFLAGS) -c $< -o $@
+#$(TARGET_VISUALIZADOR): $(SRC_VISUALIZADOR)
+#	$(CC) $(CFLAGS) $(SRC_VISUALIZADOR) -o $(TARGET_VISUALIZADOR)
 
-# Clean rule to remove generated files
+
 clean:
 	rm -f $(TARGET) $(OBJ)
 
