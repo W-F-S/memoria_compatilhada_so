@@ -4,10 +4,10 @@ CFLAGS = -Wall -g
 
 # Define the executable and source files
 TARGET_CAMPO_MEMORIA = processos
-SRC_CAMPO_MEMORIA = processos.c lib.c
+SRC_CAMPO_MEMORIA = ./codigos/processos.c ./codigos/lib.c
 
 TARGET_VISUALIZADOR = visualizador
-SRC_VISUALIZADOR = visualizador.c lib.c
+SRC_VISUALIZADOR = ./codigos/visualizador.c ./codigos/lib.c
 
 OBJ = main.o
 
@@ -16,7 +16,7 @@ mensagem = $(shell echo "Execute os arquivos $(TARGET_CAMPO_MEMORIA) e $(TARGET_
 $(info $(a))
 
 comp:
-	touch "pid.txt"
+	touch "./codigos/pid.txt"
 	$(CC) $(CFLAGS) $(SRC_CAMPO_MEMORIA) -o $(TARGET_CAMPO_MEMORIA)
 	$(CC) $(CFLAGS) $(SRC_VISUALIZADOR) -o $(TARGET_VISUALIZADOR)
 
