@@ -10,6 +10,7 @@ struct campo_compartilhado* memoria = NULL;
 //cpp -dM /usr/include/errno.h | grep 'define E' | sort -n -k 3
 
 
+
 /**
  *
  *
@@ -43,9 +44,26 @@ struct campo_compartilhado* memoria = NULL;
 
 
  devemos criar um segundo consumidor, que modifica, visualiza, e faz operaçoes simples
+
+
+
+ seu trabalho é criar um progama usando a linguagem C que:
+  cria 16 processos diferentes usando a função fork()
+  alocar uma área de memória compartilhada que contem
+    uma fila ou pilha numeros inteiros
+    uma árvore em array
+
+  cada um dos 16 processos produtores gerarão um número aleatorio,
+    esse número será colocado na primeira fila de dados
+
+  após isso um consumidor consumirá um desses números e colocará na arvore binária
+
+  o processo de geração e consumo desses números deverá ser aleatorio
+
+  no final, crie um programa que possibilite visualizar a árvore de dados
+
  *
  */
-
 
 
 
