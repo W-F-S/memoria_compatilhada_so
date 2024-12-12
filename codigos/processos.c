@@ -70,8 +70,8 @@ struct campo_compartilhado* memoria = NULL;
 
 
 int main(int argc, char *argv[]){
-  int qt_processos_produtores =7;
-  int qt_processos_consumidores =1;
+  int qt_processos_produtores =16;
+  int qt_processos_consumidores =2;
 
   pid_t pid;
 
@@ -157,7 +157,6 @@ int main(int argc, char *argv[]){
               // Wait for space in the buffer
         sem_wait(&memoria->sem_empty);
 
-        // Produce an item
         int rd_num = rand() % 101;
         printf("Produtor escrevendo %d em %d\n", rd_num, memoria->flag_produtor);
         if(memoria->flag_produtor < DATA_SZ){
@@ -189,11 +188,9 @@ int main(int argc, char *argv[]){
 }
 
 void handle_sigint(int sig) {
-  printf("\n\n\n\n");
   printf("\nSignal %d, fechando processos\n", sig);
-  printf("\n\n\n\n");
   free_memoria_compartilhada();
-  kill(getppid(), SIGTERM);
+  exit(EXIT_SUCCESS);
 }
 
 
@@ -201,8 +198,6 @@ void handle_sigint(int sig) {
  * detecta um ctr+c para que a memória seja limpa
  */
 int free_memoria_compartilhada() {
-  printf("free_memoria_compartilhada,\n");
-
   if (shmdt((void*)data) == -1) {//retirando acesso ao campo de memória
     printf("free_memoria_compartilhada, shmdt erro(%d): %s\n",errno, strerror(errno));
     return (-1);
