@@ -9,7 +9,7 @@
 #include <semaphore.h>
 
 
-#define DATA_SZ  10
+#define DATA_SZ  20
 #define THREE_SZ  100
 
 struct campo_compartilhado{

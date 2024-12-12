@@ -65,13 +65,20 @@ struct campo_compartilhado* memoria = NULL;
  *
  */
 
+ /*
+ * TODO: 
+      verificar os erros ao adicionar um valor a direita
+      ver uma forma de remover algum item da arvore
+        apenas remover um nó e os filhos para evitar ter que rebalancear tudo.
+ */
+
 
 
 
 
 int main(int argc, char *argv[]){
   int qt_processos_produtores =16;
-  int qt_processos_consumidores =2;
+  int qt_processos_consumidores =1;
 
   pid_t pid;
 

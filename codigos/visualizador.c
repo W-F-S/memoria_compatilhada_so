@@ -22,7 +22,7 @@ int main() {
   signal(SIGINT, handle_sigint);
 
   while (!stop) {
-    printf("0, sair;\n1, mostrar arvore\n2, adicionar valor arvore\n3, mostrar fila\n");
+    printf("0, sair;\n1, mostrar arvore\n2, adicionar valor arvore\n3, remover valor da arvore\n4, limpar arvore\n");
     scanf("%d", &input);
 
     switch (input) {
@@ -53,10 +53,16 @@ int main() {
       break;
 
       case 3:
-        memoria_visualizar(visualizador);
-
+        printf("\nDigite uma posicao a ser removida: \n");
+        scanf("%d", &num);
+        arvore_remover(num);
       break;
 
+      case 4:
+        arvore_limpar(visualizador);
+      break;
+
+     // case 5: //pausar codigo
 
       default:
         printf("Nenhuma função associada ao valor %d\n", input);
