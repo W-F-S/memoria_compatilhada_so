@@ -132,12 +132,15 @@ int main(int argc, char *argv[]){
           printf("Tentando ler memoria: mutex = %d, memoria cheia = %d, memoria empty = %d\n", mutex_value, memoria_value, memoria_empty);
             memoria_visualizar(memoria);
 
-            sem_wait(&memoria->sem_full);
-
-            for(int i =0 ; i < DATA_SZ; i++){arvore_adicionar(memoria->dados[i]); memoria->dados[i] = -1; }
-            memoria_visualizar(memoria);
-
+            sem_wait(&memoria->sem_mutex);
+            for(int i =0 ; i < DATA_SZ; i++){
+              arvore_adicionar(memoria->dados[i]); 
+              memoria->dados[i] = -1; 
+            }
             memoria->flag_produtor = 0;
+
+            memoria_visualizar(memoria);
+            sem_post(&memoria->sem_mutex);
             sem_post(&memoria->sem_empty);  // Indicate space is available
 
         sleep(rand() % 7 + 1);  // Simulate time for consuming
@@ -154,9 +157,9 @@ int main(int argc, char *argv[]){
             printf("Iniciando consumidor\n");
       srand(getpid());
       while(1){
-              // Wait for space in the buffer
-        sem_wait(&memoria->sem_empty);
+        sem_wait(&memoria->sem_mutex);
 
+        //escrevendo num random em uma posicao sequencial
         int rd_num = rand() % 101;
         printf("Produtor escrevendo %d em %d\n", rd_num, memoria->flag_produtor);
         if(memoria->flag_produtor < DATA_SZ){
@@ -164,22 +167,16 @@ int main(int argc, char *argv[]){
           memoria->flag_produtor++;
 
           memoria_visualizar(memoria);
-
-          // Signal item availability
-            sem_post(&memoria->sem_full);
         }
+        sem_post(&memoria->sem_mutex);
+        sem_post(&memoria->sem_full);
 
-
-        sleep(rand() % 3 + 1);  // Simulate time to produce
+        sleep(rand() % 3 + 1); //forcando um downtime
       }
-
-
     }
   }
 
-
-
-  while(1){
+  while(1){ //ver como remover isso
     //printf("aguardando\n");
     sleep(5);
   }

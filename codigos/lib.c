@@ -52,7 +52,7 @@ int arvore_adicionar_maior(int valor, int parente){
   int pos = -1;
 
   if(parente >= THREE_SZ){
-    printf("Erro ao adicionar novo valor direita, %d", parente+2);
+    printf("Erro ao adicionar novo valor direita, %d\n", parente+2);
   }else if(memoria->arvore[(parente)] == 0){
     pos = memoria->arvore[(parente)] = valor;
   }else if(memoria->arvore[(parente)] < valor){
