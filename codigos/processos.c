@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
 
   pid_t pid;
 
-  signal(SIGINT, handle_sigint); //capturando sinal
+  signal(SIGINT, handle_sigint); //capturando sinal para ctr+C
 
   memId = memoria_compartilhada();
   data =  shmat( memId, (void *)0, 0); //atrelando a mem compatilhada a um ponteiro
@@ -95,9 +95,9 @@ int main(int argc, char *argv[]){
   memoria = (struct campo_compartilhado*) data; //
   memoria->flag_produtor = 0;
 
-  for(int i=memoria->flag_consumidor; i < DATA_SZ; i++){ memoria->dados[i] = -1; }
-
-
+  for(int i=memoria->flag_consumidor; i < DATA_SZ; i++){ 
+    memoria->dados[i] = -1; 
+  }
 
   // Inicialização dos semáforos
   if (sem_init(&memoria->sem_mutex, 1, 1) == -1) { // 1 indica que é compartilhado entre processos

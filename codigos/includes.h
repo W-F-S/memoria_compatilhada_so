@@ -18,9 +18,9 @@ struct campo_compartilhado{
 
   char dados[DATA_SZ];
   char arvore[THREE_SZ];
-  sem_t sem_mutex;           // Semáforo para exclusão mútua
-  sem_t sem_full;           // Semáforo para exclusão mútua
-  sem_t sem_empty;           // Semáforo para exclusão mútua
+  sem_t sem_mutex;           
+  sem_t sem_full;            
+  sem_t sem_empty;           
 
 
 };
