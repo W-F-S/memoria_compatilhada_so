@@ -148,9 +148,9 @@ int main(int argc, char *argv[]){
 
             memoria_visualizar(memoria);
             sem_post(&memoria->sem_mutex);
-            sem_post(&memoria->sem_empty);  // Indicate space is available
+            sem_post(&memoria->sem_empty);  
 
-        sleep(rand() % 7 + 1);  // Simulate time for consuming
+        sleep(rand() % 7 + 1); 
       }
     }
   }

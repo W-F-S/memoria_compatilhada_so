@@ -1,4 +1,10 @@
 #include "includes.h"
+/**
+considero 0 como um valor vazio para arvore.
+
+o primeiro valor adicionado na árvore vai ser sempre na raiz/posicao[0]
+ */
+
 
 int memoria_compartilhada(){
   key_t keytmp = ftok("./pid1.txt", keyId);
@@ -59,8 +65,9 @@ int arvore_adicionar_maior(int valor, int parente){
   int pos = -1;
 
   if(parente >= THREE_SZ){
-    printf("Erro ao adicionar novo valor direita na pos %d\n", parente+2);
-  }else if(memoria->arvore[(parente)] == 0){
+    //printf("Erro ao adicionar novo valor direita na pos %d\n", parente+2);
+    printf("(arvore_adicionar_maior) Tentando adicionar fora dos limites [%d]\n", parente+2);
+  }else if(memoria->arvore[(parente)] == 0){ 
     pos = memoria->arvore[(parente)] = valor;
   }else if(memoria->arvore[(parente)] < valor){
     pos = arvore_adicionar_maior(valor, (2*parente)+2);
@@ -76,7 +83,8 @@ int arvore_adicionar_menor(int valor, int parente){
 
   if(valor < 0){
   }else if(parente >= THREE_SZ){
-    printf("Erro ao adicionar novo valor direita, %d\n", parente+2);
+    //printf("Erro ao adicionar novo valor direita, %d\n", parente+2);
+    printf("(arvore_adicionar_menor) Tentando adicionar fora dos limites [%d]\n", parente+2);
   }else if(memoria->arvore[(parente)] == 0){
     pos = memoria->arvore[(parente)] = valor;
   }else if(memoria->arvore[(parente)] < valor){
